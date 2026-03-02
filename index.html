@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elite-Cyber IA | Vision Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #050505; color: #e5e7eb; font-family: 'Inter', sans-serif; }
+        .violet-glow { box-shadow: 0 0 20px rgba(139, 92, 246, 0.15); }
+        .chat-box::-webkit-scrollbar { width: 4px; }
+        .chat-box::-webkit-scrollbar-thumb { background: #7c3aed; border-radius: 10px; }
+        .border-neon { border: 1px solid rgba(139, 92, 246, 0.3); }
+    </style>
+</head>
+<body class="flex flex-col h-screen p-4 max-w-2xl mx-auto">
+    
+    <header class="flex justify-between items-center mb-6 border-b border-violet-900/50 pb-4">
+        <div>
+            <h1 class="text-2xl font-black text-violet-500 tracking-tighter">ELITE-VISION <span class="text-white">IA</span></h1>
+            <p class="text-[10px] text-zinc-500 uppercase tracking-widest">Abidjan Cyber-Security Unit</p>
+        </div>
+        <span class="text-[10px] bg-violet-950 text-violet-300 border border-violet-800 px-3 py-1 rounded-full font-bold">MODE NON CENSURÉ</span>
+    </header>
+
+    <div id="chat" class="chat-box flex-grow overflow-y-auto mb-6 space-y-4 pr-2">
+        <div class="bg-zinc-900/40 p-4 rounded-2xl border-neon">
+            <p class="text-[10px] font-bold text-violet-500 mb-1 uppercase tracking-wider">Système :</p>
+            <p class="text-sm text-zinc-300">Terminal prêt. Envoie un texte ou une capture d'écran pour analyse immédiate.</p>
+        </div>
+    </div>
+
+    <div class="bg-zinc-900/80 border border-violet-900/50 p-3 rounded-2xl violet-glow backdrop-blur-md">
+        <div id="preview" class="hidden mb-3 p-2 bg-violet-950/30 rounded-lg text-[10px] text-violet-400 font-mono border border-violet-800/30">
+            [+] IMAGE CHARGÉE : ANALYSE PRÊTE
+        </div>
+        
+        <div class="flex items-center gap-3">
+            <label class="cursor-pointer hover:bg-violet-900/30 p-3 rounded-xl transition-all border border-transparent hover:border-violet-800">
+                <span class="text-xl text-violet-500 font-light">+</span>
+                <input type="file" id="fileInput" class="hidden" accept="image/*">
+            </label>
+            
+            <input type="text" id="userPrompt" 
+                class="flex-grow bg-transparent p-2 focus:outline-none text-sm text-white placeholder-zinc-600"
+                placeholder="Décris ton problème ou pose une question...">
+            
+            <button onclick="envoyer()" id="btnSend"
+                class="bg-violet-600 hover:bg-violet-700 text-white px-6 py-2.5 rounded-xl font-black text-xs transition-all active:scale-95 shadow-lg shadow-violet-900/20">
+                LANCER
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let base64Image = "";
+
+        // Conversion de l'image en texte Base64
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                document.getElementById('preview').classList.remove('hidden');
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    base64Image = event.target.result.split(',')[1];
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        async function envoyer() {
+            const input = document.getElementById('userPrompt');
+            const chat = document.getElementById('chat');
+            const btn = document.getElementById('btnSend');
+            const prompt = input.value;
+
+            if(!prompt && !base64Image) return;
+
+            // Affichage Message Utilisateur
+            chat.innerHTML += `<div class="text-right"><span class="bg-violet-800/40 border border-violet-700/30 p-3 rounded-2xl rounded-tr-none inline-block text-sm max-w-[85%] text-zinc-100">${prompt || "Analyse de fichier..."}</span></div>`;
+            
+            input.value = '';
+            btn.innerText = "CHG...";
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt: prompt || "Analyse cette image.", imageBase64: base64Image })
+                });
+                const data = await res.json();
+                
+                chat.innerHTML += `
+                    <div class="bg-zinc-900/60 p-5 rounded-2xl border-l-2 border-violet-500 shadow-inner">
+                        <p class="text-[10px] font-black text-violet-500 mb-2 uppercase tracking-widest">Elite AI :</p>
+                        <p class="text-sm leading-relaxed text-zinc-200">${data.reponse}</p>
+                    </div>`;
+            } catch (err) {
+                chat.innerHTML += `<p class="text-red-500 text-[10px] font-mono uppercase">! Erreur de transmission !</p>`;
+            }
+
+            // Reset Interface
+            base64Image = "";
+            document.getElementById('preview').classList.add('hidden');
+            btn.innerText = "LANCER";
+            btn.disabled = false;
+            chat.scrollTop = chat.scrollHeight;
+        }
+    </script>
+</body>
+</html>
